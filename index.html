@@ -2,19 +2,31 @@
 <html>
 <head>
 <meta charset=utf-8 />
-<title>Super Mario HTML5 Test</title>
+<title>Escape The Scam</title>
 <link href="Content/style.css" rel="stylesheet" />
 </head>
 <body>
-<div id="game">
-<div id="world">
+
+<div id="login-screen">
+    <div id="login-box">
+        <h2>Game: Escape The Scam</h2>
+        <p>Vui lòng nhập thông tin (UEH Student)</p>
+        <input type="text" id="input-name" placeholder="Họ và tên...">
+        <input type="text" id="input-mssv" placeholder="MSSV...">
+        <button id="login-button">Vào Game</button>
+    </div>
 </div>
-<div id="coinNumber" class="gauge">0</div>
-<div id="coin" class="gaugeSprite"></div>
-<div id="liveNumber" class="gauge">0</div>
-<div id="live" class="gaugeSprite"></div>
+<div id="game" class="hidden">
+    <div id="world">
+    </div>
+    <div id="coinNumber" class="gauge">0</div>
+    <div id="coin" class="gaugeSprite"></div>
+    <div id="liveNumber" class="gauge">0</div>
+    <div id="live" class="gaugeSprite"></div>
 </div>
-<iframe width="0" height="0" src="https://www.youtube.com/embed/SB1VqLCTFpA?rel=0&autoplay=1" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<iframe id="game-music" width="0" height="0" src="" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <script>window.jQuery || document.write('<script src="Scripts/jQuery.js"><\/script>')</script>
 <script src="Scripts/testlevels.js"></script>
@@ -22,5 +34,56 @@
 <script src="Scripts/keys.js"></script>
 <script src="Scripts/constants.js"></script>
 <script src="Scripts/main.js"></script>
+
+<script>
+// Chờ cho toàn bộ trang được tải xong
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Lấy các phần tử DOM
+    const loginScreen = document.getElementById('login-screen');
+    const loginButton = document.getElementById('login-button');
+    const gameDiv = document.getElementById('game');
+    const gameMusic = document.getElementById('game-music');
+    
+    const inputName = document.getElementById('input-name');
+    const inputMssv = document.getElementById('input-mssv');
+
+    // URL nhạc (Bạn có thể thay bằng link nhạc "Escape the Scam" mới)
+    const musicURL = 'https://www.youtube.com/embed/SB1VqLCTFpA?rel=0&autoplay=1';
+
+    // Thêm sự kiện "click" cho nút "Vào Game"
+    loginButton.addEventListener('click', function() {
+        // Lấy giá trị từ input
+        const name = inputName.value.trim();
+        const mssv = inputMssv.value.trim();
+
+        // Kiểm tra xem đã nhập đủ thông tin chưa
+        if (name === '' || mssv === '') {
+            alert('Vui lòng nhập đầy đủ Họ và tên và MSSV!');
+            return; // Dừng lại nếu chưa nhập
+        }
+
+        // (Tùy chọn) Bạn có thể lưu tên và mssv ở đây nếu muốn
+        // localStorage.setItem('playerName', name);
+        console.log(`Người chơi: ${name} - MSSV: ${mssv} đã vào game.`);
+
+        // 1. Ẩn màn hình đăng nhập
+        loginScreen.style.display = 'none';
+
+        // 2. Hiển thị game
+        gameDiv.classList.remove('hidden');
+
+        // 3. Bắt đầu phát nhạc
+        gameMusic.src = musicURL;
+        
+        // 4. (Rất quan trọng) Gọi lại hàm scaleGame()
+        // Hàm này từ code responsive ở lần trước
+        // Để đảm bảo game được scale đúng kích thước sau khi hiển thị
+        if (typeof scaleGame === 'function') {
+            scaleGame();
+        }
+    });
+});
+</script>
 </body>
 </html>
