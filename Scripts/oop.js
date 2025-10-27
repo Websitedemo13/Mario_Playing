@@ -1,66 +1,71 @@
-var reflection = {};
-reflection['questionbox'] = QuestionBox; // Thêm dòng này
+var reflection = {}; // Khởi tạo reflection toàn cục
+
+// Dòng reflection['questionbox'] = QuestionBox; ĐÃ BỊ XÓA KHỎI ĐÂY
 
 //http://ejohn.org/blog/simple-javascript-inheritance/
 (function(){
     var initializing = false, fnTest = /xyz/.test(function(){xyz;}) ? /\b_super\b/ : /.*/;
 
-    // The base Class implementation (does nothing)
+    // Lớp Class cơ sở (không làm gì)
     this.Class = function(){};
    
-    // Create a new Class that inherits from this class
+    // Hàm để tạo lớp con mới kế thừa từ lớp hiện tại
     Class.extend = function(prop, ref_name) {
-        if(ref_name)
-            reflection[ref_name] = Class; // Sử dụng Class mới được tạo ra
-           
-        var _super = this.prototype;
+        
+        var _super = this.prototype; // Lấy prototype của lớp cha
 
-        // Instantiate a base class (but only create the instance,
-        // don't run the init constructor)
+        // Tạo một đối tượng prototype mới kế thừa từ lớp cha
+        // nhưng không chạy hàm init() của cha
         initializing = true;
         var prototype = new this();
         initializing = false;
        
-        // Copy the properties over onto the new prototype
+        // Sao chép các thuộc tính/phương thức từ 'prop' vào prototype mới
         for (var name in prop) {
-        // Check if we're overwriting an existing function
-        prototype[name] = typeof prop[name] == "function" && 
-            typeof _super[name] == "function" && fnTest.test(prop[name]) ?
-            (function(name, fn) {
+            // Kiểm tra xem có đang ghi đè một hàm và có gọi _super không
+            prototype[name] = typeof prop[name] == "function" && 
+              typeof _super[name] == "function" && fnTest.test(prop[name]) ?
+              // Nếu có, tạo hàm bao (wrapper) để cung cấp this._super
+              (function(name, fn){
                 return function() {
-                    var tmp = this._super;
-
-                    // Add a new ._super() method that is the same method
-                    // but on the super-class
-                    this._super = _super[name];
-
-                    // The method only need to be bound temporarily, so we
-                    // remove it when we're done executing
-                    var ret = fn.apply(this, arguments);        
-                    this._super = tmp;
-
-                    return ret;
+                  var tmp = this._super;
+                  // Gán tạm this._super thành hàm của lớp cha
+                  this._super = _super[name];
+                  // Thực thi hàm của lớp con
+                  var ret = fn.apply(this, arguments);        
+                  // Phục hồi this._super cũ
+                  this._super = tmp;
+                  return ret;
                 };
-            })(name, prop[name]) :
-            prop[name];
+              })(name, prop[name]) :
+              // Nếu không, chỉ cần sao chép qua
+              prop[name];
         }
        
-        // The dummy class constructor
+        // Hàm khởi tạo (constructor) thực sự cho lớp con
         function Class() {
-            // All construction is actually done in the init method
+            // Chỉ gọi hàm init() khi tạo đối tượng mới (không phải khi kế thừa)
             if ( !initializing && this.init )
                 this.init.apply(this, arguments);
         }
        
-        // Populate our constructed prototype object
+        // Gán prototype đã tạo cho lớp con
         Class.prototype = prototype;
        
-        // Enforce the constructor to be what we expect
+        // Đặt lại constructor cho đúng
         Class.prototype.constructor = Class;
 
-        // And make this class extendable
-        Class.extend = arguments.callee; // Sửa lại thành arguments.callee
+        // Cho phép lớp con này tiếp tục được kế thừa
+        Class.extend = arguments.callee; 
        
-        return Class;
+        // === SỬA LỖI: Gán vào reflection SAU KHI Class con đã hoàn chỉnh ===
+        if(ref_name) {
+             reflection[ref_name] = Class; // Gán lớp con vào reflection
+             // console.log("Registered reflection:", ref_name); // Bỏ comment để debug nếu cần
+        }
+        // =================================================================
+       
+        return Class; // Trả về lớp con mới
     };
 })();
+
