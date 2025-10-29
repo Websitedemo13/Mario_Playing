@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -60,10 +60,17 @@
         <div id="world"></div>
         <div id="coinNumber" class="gauge">0</div>
         <div id="coin" class="gaugeSprite"></div>
+        <div id="game-timer-display" class="gauge">10:00</div>
         <div id="liveNumber" class="gauge">0</div>
         <div id="live" class="gaugeSprite"></div>
         <div id="playerName" class="gauge gauge-text"></div>
         <div id="playerMSSV" class="gauge gauge-text"></div>
+    </div>
+
+    <!-- Penalty Notification -->
+    <div id="penalty-notification" class="hidden">
+        <p>⚠️ TRẢ LỜI SAI!</p>
+        <p>BỊ TRỪ 2 PHÚT ⏱️</p>
     </div>
 
     <!-- Joystick (Giữ nguyên HTML) -->
@@ -172,7 +179,10 @@
                  gameDiv.style.opacity = '1'; 
                  
                  // Gọi hàm khởi tạo game CHỈ KHI ĐĂNG NHẬP THÀNH CÔNG
-                 initGame(); 
+                 initGame();
+
+                 // Bắt đầu timer
+                 startGameTimer(); 
                  
                  // Phát nhạc nền
                  gameMusic.play().catch(e => console.warn("Audio play failed:", e)); 
@@ -192,18 +202,166 @@
             }, 400); 
         });
 
-        // --- Quiz Functions --- (Giữ nguyên logic)
-        window.showQuiz = function(questionIndex, questionBoxRef) { /* ... */ };
-        function handleAnswer(selectedIndex) { /* ... */ };
-        window.hideQuiz = function() { /* ... */ };
+        // --- Timer System ---
+        let gameTimeRemaining = 600; // 10 phút = 600 giây
+        let timerInterval = null;
+        const timerDisplay = document.getElementById('game-timer-display');
+
+        function startGameTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                gameTimeRemaining--;
+                updateTimerDisplay();
+
+                if (gameTimeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    handleGameOver(false); // Hết giờ = thua
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameTimeRemaining / 60);
+            const seconds = gameTimeRemaining % 60;
+            if (timerDisplay) {
+                timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // --- Penalty System ---
+        const penaltyNotification = document.getElementById('penalty-notification');
+
+        window.applyTimePenalty = function() {
+            const PENALTY_SECONDS = 120; // 2 phút
+            gameTimeRemaining -= PENALTY_SECONDS;
+
+            if (gameTimeRemaining < 0) gameTimeRemaining = 0;
+            updateTimerDisplay();
+
+            // Hiển thị thông báo phạt
+            if (penaltyNotification) {
+                penaltyNotification.classList.remove('hidden');
+                setTimeout(() => {
+                    penaltyNotification.classList.add('hidden');
+                }, 3000);
+            }
+        };
+
+        // --- Quiz Functions ---
+        window.showQuiz = function(questionIndex, questionBoxRef) {
+            if (!gameQuestions || questionIndex < 0 || questionIndex >= gameQuestions.length) {
+                console.error('Invalid question index:', questionIndex);
+                return;
+            }
+
+            const question = gameQuestions[questionIndex];
+            currentQuestionBoxRef = questionBoxRef;
+            currentCorrectAnswerIndex = question.correct;
+
+            // Dừng game
+            if (currentLevelRef) currentLevelRef.pause();
+            if (currentMarioRef) currentMarioRef.setVelocity(0, 0);
+            keys.reset();
+            keys.unbind();
+
+            // Hiển thị câu hỏi
+            quizQuestion.textContent = question.question;
+            for (let i = 0; i < quizOptionBtns.length; i++) {
+                if (question.options[i]) {
+                    quizOptionBtns[i].textContent = question.options[i];
+                    quizOptionBtns[i].classList.remove('hidden', 'correct', 'incorrect');
+                    quizOptionBtns[i].disabled = false;
+                    quizOptionBtns[i].onclick = () => handleAnswer(i);
+                } else {
+                    quizOptionBtns[i].classList.add('hidden');
+                }
+            }
+
+            quizExplanation.classList.add('hidden');
+            quizContinueBtn.classList.add('hidden');
+            quizOverlay.classList.remove('hidden');
+        };
+
+        function handleAnswer(selectedIndex) {
+            const question = gameQuestions[currentQuestionBoxRef ? currentQuestionBoxRef.questionIndex : 0];
+            const isCorrect = selectedIndex === currentCorrectAnswerIndex;
+
+            // Disable tất cả buttons
+            for (let i = 0; i < quizOptionBtns.length; i++) {
+                quizOptionBtns[i].disabled = true;
+            }
+
+            // Hiển thị đúng/sai
+            quizOptionBtns[selectedIndex].classList.add(isCorrect ? 'correct' : 'incorrect');
+            if (!isCorrect) {
+                quizOptionBtns[currentCorrectAnswerIndex].classList.add('correct');
+            }
+
+            // Hiển thị giải thích
+            quizExplanation.textContent = question.explanation;
+            quizExplanation.classList.remove('hidden');
+            quizContinueBtn.classList.remove('hidden');
+
+            // Xử lý kết quả
+            if (isCorrect) {
+                if (currentMarioRef) currentMarioRef.addCoin();
+            } else {
+                // TRẢ LỜI SAI: Trừ 1 mạng + Trừ 2 phút
+                if (currentMarioRef) currentMarioRef.hurt();
+                applyTimePenalty();
+            }
+        }
+
+        window.hideQuiz = function() {
+            quizOverlay.classList.add('hidden');
+
+            // Tiếp tục game
+            if (currentLevelRef) currentLevelRef.start();
+            keys.bind();
+        };
+
         quizContinueBtn.onclick = hideQuiz;
 
         // --- Joystick --- (Giữ nguyên logic)
         function simulateKey(keyCode, eventType) { /* ... */ }
         if (isTouchDevice) { /* ... */ }
 
-        // --- Game Over --- (Giữ nguyên logic)
-        window.handleGameOver = function() { /* ... */ };
+        // --- Game Over & Victory ---
+        window.handleGameOver = function(victory = false) {
+            console.log(victory ? 'Game Victory!' : 'Game Over!');
+
+            // Dừng timer
+            if (timerInterval) clearInterval(timerInterval);
+
+            // Dừng game
+            if (currentLevelRef) currentLevelRef.pause();
+            keys.reset();
+            keys.unbind();
+
+            if (victory) {
+                // Chiến thắng - Hiển thị màn hình chứng nhận
+                showCertificate();
+            } else {
+                // Thua - Reload
+                alert('Game Over! Hết thời gian hoặc hết mạng.');
+                window.location.reload();
+            }
+        };
+
+        window.handleGameVictory = function() {
+            handleGameOver(true);
+        };
+
+        function showCertificate() {
+            const playerName = localStorage.getItem('playerName') || 'Người chơi';
+            const playerMSSV = localStorage.getItem('playerMSSV') || 'N/A';
+            const timeElapsed = 600 - gameTimeRemaining;
+            const minutes = Math.floor(timeElapsed / 60);
+            const seconds = timeElapsed % 60;
+
+            alert(`🎉 CHÚC MỪNG ${playerName}!\n\nBạn đã hoàn thành xuất sắc!\nThời gian: ${minutes}:${seconds.toString().padStart(2, '0')}\nMSSV: ${playerMSSV}`);
+            window.location.reload();
+        }
         
     }); // End DOMContentLoaded
     </script>

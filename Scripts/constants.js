@@ -1,4 +1,4 @@
-﻿/*
+/*
  * *****
  * WRITTEN BY FLORIAN RAPPL, 2012.
  * florian-rappl.de
@@ -87,6 +87,10 @@ const constants = {
     invincible      : 10000, // Thời gian bất tử Sao (ms)
     invulnerable    : 1200,  // Thời gian miễn nhiễm sau khi bị thương (ms)
     blinkfactor     : 6,     // Tốc độ nhấp nháy khi miễn nhiễm
+
+    // === ESCAPE THE SCAM - TIMER & PENALTY ===
+    GAME_TIME_LIMIT : 600,   // Thời gian chơi: 10 phút = 600 giây
+    PENALTY_TIME    : 120,   // Phạt khi trả lời sai: 2 phút = 120 giây
 };
 
 // Loại vật phẩm trong hộp ?

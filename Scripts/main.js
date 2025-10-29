@@ -1,4 +1,4 @@
-﻿/*
+/*
  * *****
  * WRITTEN BY FLORIAN RAPPL, 2012.
  * florian-rappl.de
@@ -251,13 +251,18 @@ var Level = Base.extend({
 
         const nextLevelId = this.id + 1;
         // Kết thúc game nếu đã hoàn thành màn cuối (id=2)
-        if (nextLevelId >= definedLevels.length || nextLevelId >= 3) { 
+        if (nextLevelId >= definedLevels.length || nextLevelId >= 3) {
             this.pause(); keys.reset(); keys.unbind();
-            if(this.sounds) this.sounds.stopMusic(); 
-            // TODO: Thay alert bằng màn hình chiến thắng
-            alert("Chúc mừng! Bạn đã hoàn thành xuất sắc!"); 
-            window.location.reload(); 
-            return; 
+            if(this.sounds) this.sounds.stopMusic();
+
+            // Gọi hàm chiến thắng
+            if (typeof window.handleGameVictory === 'function') {
+                window.handleGameVictory();
+            } else {
+                alert("Chúc mừng! Bạn đã hoàn thành xuất sắc!");
+                window.location.reload();
+            }
+            return;
         }
         
         console.log("Loading next level:", nextLevelId);
@@ -469,17 +474,19 @@ var QuestionBox = Item.extend({
     assignQuestion: function(index) { this.questionIndex = index; },
     activate: function(from) {
         if (!this.isUsed && !this.isBouncing && from instanceof Mario) {
-            this.bounce(); 
-            this.clearFrames(); 
+            this.bounce();
+            this.clearFrames();
             this.setImage(images.objects, 514, 194); // Ảnh hộp đã dùng
-            this.isUsed = true; 
+            this.isUsed = true;
             this.level.playSound('mushroom'); // Âm thanh tạm
 
+            // BUỘC MARIO DỪNG LẠI
+            from.setVelocity(0, 0);
+
             if (typeof window.showQuiz === 'function') {
-                window.showQuiz(this.questionIndex, this); 
+                window.showQuiz(this.questionIndex, this);
             } else { console.error("showQuiz function not found!"); }
         }
-        // Không gọi _super() ở đây vì Item không có activate
     },
      // Ghi đè playFrame để dừng nhấp nháy nếu isUsed=true
      playFrame: function() {
